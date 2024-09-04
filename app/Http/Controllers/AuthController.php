@@ -24,6 +24,9 @@ class AuthController extends Controller
                 'password' => Hash::make($request->password),
             ]);
 
+            $user->wallet()->create();
+            $user->savingsAccounts()->create();
+
             return response()->json(['message' => 'User registered successfully'], 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
