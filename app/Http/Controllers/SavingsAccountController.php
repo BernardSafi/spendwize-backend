@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class SavingsAccountController extends Controller
 {
@@ -40,13 +41,30 @@ class SavingsAccountController extends Controller
     return response()->json(['message' => 'Transfer to savings successful']);
 }
 
-public function getSaving()
+public function getSaving(Request $request)
 {
-    $user = Auth::user(); // Get the authenticated user
-    return response()->json([
-        'usd_balance' => $user->savingsAccount->usd_balance,
-        'lbp_balance' => $user->savingsAccount->lbp_balance
-    ]);
+    $user = Auth::user();
+
+    if ($user) {
+        // Retrieve the wallet balance using the correct relationship method
+        $saving = $user->savingsAccounts; 
+        
+        if ($saving) {
+            $usd_balance = $saving->usd_balance ?? 0.0; // Use null coalescing operator
+            $lbp_balance = $saving->lbp_balance ?? 0.0; // Use null coalescing operator
+
+            return response()->json([
+                'usd_balance' => $usd_balance,
+                'lbp_balance' => $lbp_balance,
+            ]);
+        } else {
+            return response()->json(['error' => 'Wallet not found'], 404);
+        }
+    } else {
+        return response()->json(['error' => 'User not authenticated'], 401);
+    }
 }
+
+
 
 }
