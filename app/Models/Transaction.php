@@ -9,19 +9,23 @@ class Transaction extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'user_id', 
+        'type', 
+        'subtype', 
+        'amount', 
+        'currency', 
+        'from_account', 
+        'to_account', 
+        'exchange_rate',
+        'description', 
+    ];
+
+    /**
+     * Define relationship to the User model.
+     */
     public function user()
-{
-    return $this->belongsTo(User::class);
-}
-
-public function wallet()
-{
-    return $this->belongsTo(Wallet::class);
-}
-
-public function savingsAccount()
-{
-    return $this->belongsTo(SavingsAccount::class);
-}
-
+    {
+        return $this->belongsTo(User::class);
+    }
 }

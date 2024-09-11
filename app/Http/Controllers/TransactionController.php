@@ -2,142 +2,81 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Transaction;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 class TransactionController extends Controller
 {
     /**
-     * Display a listing of the user's transactions.
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * Display a listing of the transactions.
      */
     public function index()
     {
-        $user = Auth::user(); // Get the authenticated user
-
-        // Retrieve all transactions for this user
-        $transactions = Transaction::where('user_id', $user->id)->get();
-
+        $transactions = Transaction::with('user')->get();
         return response()->json($transactions);
+    }
+
+    /**
+     * Store a new transaction.
+     */
+    public function store(Request $request)
+    {
+        $validatedData = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'type' => 'required|in:income,expense,transfer,exchange',
+            'subtype' => 'nullable|string',
+            'amount' => 'required|numeric',
+            'currency' => 'required|in:USD,LBP',
+            'from_account' => 'nullable|string',
+            'to_account' => 'nullable|string',
+            'exchange_rate' => 'nullable|numeric',
+            'description' => 'nullable|string', 
+        ]);
+
+        $transaction = Transaction::create($validatedData);
+
+        return response()->json($transaction, 201);
     }
 
     /**
      * Display the specified transaction.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
      */
     public function show($id)
     {
-        $user = Auth::user(); // Get the authenticated user
-
-        // Retrieve the transaction that belongs to the user
-        $transaction = Transaction::where('user_id', $user->id)->findOrFail($id);
-
+        $transaction = Transaction::with('user')->findOrFail($id);
         return response()->json($transaction);
     }
 
     /**
-     * Store a newly created transaction in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function store(Request $request)
-    {
-        $user = Auth::user(); // Get the authenticated user
-
-        // Validate the incoming request
-        $request->validate([
-            'amount' => 'required|numeric',
-            'type' => 'required|string', // 'income', 'expense', 'transfer', etc.
-            'description' => 'nullable|string',
-            'date' => 'required|date',
-        ]);
-
-        // Create a new transaction
-        $transaction = new Transaction([
-            'user_id' => $user->id,
-            'amount' => $request->amount,
-            'type' => $request->type,
-            'description' => $request->description,
-            'date' => $request->date,
-        ]);
-
-        $transaction->save();
-
-        return response()->json($transaction, 201); // 201 Created
-    }
-
-    /**
-     * Update the specified transaction in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
+     * Update the specified transaction.
      */
     public function update(Request $request, $id)
     {
-        $user = Auth::user(); // Get the authenticated user
-
-        // Validate the incoming request
-        $request->validate([
+        $validatedData = $request->validate([
+            'type' => 'required|in:income,expense,transfer,exchange',
+            'subtype' => 'nullable|string',
             'amount' => 'required|numeric',
-            'type' => 'required|string',
-            'description' => 'nullable|string',
-            'date' => 'required|date',
+            'currency' => 'required|in:USD,LBP',
+            'from_account' => 'nullable|string',
+            'to_account' => 'nullable|string',
+            'exchange_rate' => 'nullable|numeric',
+            'description' => 'nullable|string', 
         ]);
 
-        // Find the transaction that belongs to the user
-        $transaction = Transaction::where('user_id', $user->id)->findOrFail($id);
-
-        // Update the transaction details
-        $transaction->amount = $request->amount;
-        $transaction->type = $request->type;
-        $transaction->description = $request->description;
-        $transaction->date = $request->date;
-
-        $transaction->save();
+        $transaction = Transaction::findOrFail($id);
+        $transaction->update($validatedData);
 
         return response()->json($transaction);
     }
 
     /**
-     * Remove the specified transaction from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
+     * Remove the specified transaction.
      */
     public function destroy($id)
     {
-        $user = Auth::user(); // Get the authenticated user
-
-        // Find the transaction that belongs to the user
-        $transaction = Transaction::where('user_id', $user->id)->findOrFail($id);
-
-        // Delete the transaction
+        $transaction = Transaction::findOrFail($id);
         $transaction->delete();
 
-        return response()->json(null, 204); // 204 No Content
-    }
-
-    /**
-     * Retrieve the last 5 transactions of the authenticated user.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function recentTransactions()
-    {
-        $user = Auth::user(); // Get the authenticated user
-
-        // Retrieve the last 5 transactions for this user, ordered by date
-        $transactions = Transaction::where('user_id', $user->id)
-                                    ->orderBy('date', 'desc')
-                                    ->take(5)
-                                    ->get();
-
-        return response()->json($transactions);
+        return response()->json(['message' => 'Transaction deleted successfully']);
     }
 }

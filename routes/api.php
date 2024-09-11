@@ -6,9 +6,17 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SavingsAccountController;
+use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\IncomeTypeController;
+use App\Http\Controllers\ExpenseTypeController;
 
 Route::post('register', [AuthController::class, 'register']);
 Route::post('login', [AuthController::class, 'login']);
+Route::get('/income-types', [IncomeTypeController::class, 'index']);
+Route::post('/income-types', [IncomeTypeController::class, 'store']);
+
+Route::get('/expense-types', [ExpenseTypeController::class, 'index']);
+Route::post('/expense-types', [ExpenseTypeController::class, 'store']);
 
 
 /*
@@ -25,7 +33,11 @@ Route::post('login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/wallet/add-income', [WalletController::class, 'addIncome']);
     Route::post('/savings/transfer', [SavingsAccountController::class, 'transferToSavings']);
-    Route::get('/transactions', [TransactionController::class, 'index']); // List transactions
+    Route::get('/transactions', [TransactionController::class, 'index']);
+    Route::post('/transactions', [TransactionController::class, 'store']);
+    Route::get('/transactions/{id}', [TransactionController::class, 'show']);
+    Route::put('/transactions/{id}', [TransactionController::class, 'update']);
+    Route::delete('/transactions/{id}', [TransactionController::class, 'destroy']);
     Route::get('/wallet', [WalletController::class, 'getWallet']);
     Route::get('/user/name', [UserController::class, 'getUserName']);
     Route::get('/saving', [SavingsAccountController::class, 'getSaving']);
