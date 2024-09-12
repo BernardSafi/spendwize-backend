@@ -41,4 +41,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/wallet', [WalletController::class, 'getWallet']);
     Route::get('/user/name', [UserController::class, 'getUserName']);
     Route::get('/saving', [SavingsAccountController::class, 'getSaving']);
+    Route::post('/transfer/wallet-to-saving-lbp', [TransactionController::class, 'walletToSavingLbp']);
+    Route::post('/transfer/saving-to-wallet-lbp', [TransactionController::class, 'savingToWalletLbp']);
+    Route::post('/transfer/wallet-to-saving-usd', [TransactionController::class, 'walletToSavingUsd']);
+    Route::post('/transfer/saving-to-wallet-usd', [TransactionController::class, 'savingToWalletUsd']);
 });
