@@ -29,20 +29,30 @@ Route::post('/expense-types', [ExpenseTypeController::class, 'store']);
 | be assigned to the "api" middleware group. Make something great!
 |
 */
-
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/wallet/add-income', [WalletController::class, 'addIncome']);
+    // Saving transfers
     Route::post('/savings/transfer', [SavingsAccountController::class, 'transferToSavings']);
+    
+    // Transactions
     Route::get('/transactions', [TransactionController::class, 'index']);
     Route::post('/transactions', [TransactionController::class, 'store']);
     Route::get('/transactions/{id}', [TransactionController::class, 'show']);
     Route::put('/transactions/{id}', [TransactionController::class, 'update']);
     Route::delete('/transactions/{id}', [TransactionController::class, 'destroy']);
+    
+    // Wallet and user info
     Route::get('/wallet', [WalletController::class, 'getWallet']);
     Route::get('/user/name', [UserController::class, 'getUserName']);
     Route::get('/saving', [SavingsAccountController::class, 'getSaving']);
+    
+    // Transfers between wallets and savings
     Route::post('/transfer/wallet-to-saving-lbp', [TransactionController::class, 'walletToSavingLbp']);
     Route::post('/transfer/saving-to-wallet-lbp', [TransactionController::class, 'savingToWalletLbp']);
     Route::post('/transfer/wallet-to-saving-usd', [TransactionController::class, 'walletToSavingUsd']);
     Route::post('/transfer/saving-to-wallet-usd', [TransactionController::class, 'savingToWalletUsd']);
+    
+    // Income transactions
+    Route::post('/transactions/income', [TransactionController::class, 'addIncome']);
+    Route::post('/transactions/expense', [TransactionController::class, 'addexpense']);
 });
+
