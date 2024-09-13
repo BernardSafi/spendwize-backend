@@ -335,7 +335,7 @@ class TransactionController extends Controller
             'amount' => $validatedData['amount'],
             'currency' => $validatedData['currency'],
             'description' => $validatedData['description'],
-            'income_type_id' => $incomeType->id, // Use the retrieved income type ID
+            'subtype' => $incomeType->name, // Use the retrieved income type ID
         ]);
     
         Log::info('Income transaction recorded.', ['transaction' => $transaction]);
@@ -403,7 +403,7 @@ class TransactionController extends Controller
         'amount' => $validatedData['amount'],
         'currency' => $validatedData['currency'],
         'description' => $validatedData['description'],
-        'expense_type_id' => $expenseType->id, // Use the retrieved expense type ID
+        'subtype' => $expenseType->name, // Use the retrieved expense type ID
     ]);
 
     Log::info('Expense transaction recorded.', ['transaction' => $transaction]);
