@@ -16,8 +16,19 @@ class TransactionController extends Controller
      */
     public function index()
     {
-        $transactions = Transaction::with('user')->get();
-        return response()->json($transactions);
+        // Ensure the user is authenticated
+        $user = auth()->user();
+    
+        if ($user) {
+            // Fetch transactions related to the authenticated user
+            $transactions = Transaction::where('user_id', $user->id)->with('user')->get();
+    
+            // Return a successful response with a 201 status code
+            return response()->json($transactions, 201);
+        } else {
+            // Return unauthorized response if the user is not authenticated
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
     }
 
     /**
