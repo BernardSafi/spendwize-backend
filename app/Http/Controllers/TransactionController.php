@@ -31,6 +31,94 @@ class TransactionController extends Controller
         }
     }
 
+    public function exchangeCurrency(Request $request)
+    {
+        // Get the authenticated user
+        $user = Auth::user();
+        
+        // Check if user is authenticated
+        if (!$user) {
+            return response()->json(['message' => 'User not authenticated'], 401);
+        }
+    
+        // Validate input
+        $validatedData = $request->validate([
+            'from_account' => 'required|string|in:wallet_usd,wallet_lbp', // from account can be either 'wallet_usd' or 'wallet_lbp'
+            'to_account' => 'required|string|in:wallet_usd,wallet_lbp',   // to account can be 'wallet_usd' or 'wallet_lbp'
+            'amount' => 'required|numeric|min:1',            // Amount to exchange must be at least 1
+            'exchange_rate' => 'required|numeric|min:0.01'   // Exchange rate must be greater than 0
+        ]);
+    
+        // Extract validated data
+        $fromAccount = $validatedData['from_account'];
+        $toAccount = $validatedData['to_account'];
+        $amount = $validatedData['amount'];
+        $exchangeRate = $validatedData['exchange_rate'];
+    
+        // Ensure from_account and to_account are not the same
+        if ($fromAccount === $toAccount) {
+            return response()->json(['message' => 'Cannot exchange within the same account'], 400);
+        }
+    
+        // Retrieve the user's wallet
+        $wallet = $user->wallet;
+    
+        if (!$wallet) {
+            return response()->json(['message' => 'Wallet not found'], 404);
+        }
+    
+        // Perform exchange based on the from_account and to_account
+        if ($fromAccount === 'wallet_usd' && $toAccount === 'wallet_lbp') {
+            // Check if user has enough USD in their wallet
+            if ($wallet->usd_balance < $amount) {
+                return response()->json(['message' => 'Insufficient USD balance'], 400);
+            }
+    
+            // Convert USD to LBP using the exchange rate
+            $wallet->usd_balance -= $amount;
+            $wallet->lbp_balance += $amount * $exchangeRate;
+    
+        } elseif ($fromAccount === 'wallet_lbp' && $toAccount === 'wallet_usd') {
+            // Check if user has enough LBP in their wallet
+            if ($wallet->lbp_balance < $amount) {
+                return response()->json(['message' => 'Insufficient LBP balance'], 400);
+            }
+    
+            // Convert LBP to USD using the exchange rate
+            $wallet->lbp_balance -= $amount;
+            $wallet->usd_balance += $amount / $exchangeRate;
+        }
+    
+        // Save the updated wallet balances
+        $wallet->save();
+    
+        // Determine the currency based on the from_account
+        $currency = ($fromAccount === 'wallet_usd') ? 'USD' : 'LBP';
+    
+        // Record the exchange transaction with from_account and to_account
+        Transaction::create([
+            'user_id' => $user->id,
+            'type' => 'exchange',  // Define the type as 'exchange'
+            'from_account' => $fromAccount,
+            'to_account' => $toAccount,
+            'amount' => $amount,
+            'exchange_rate' => $exchangeRate,
+            'currency' => $currency, // Add currency to the transaction
+        ]);
+    
+        // Return a successful response
+        return response()->json([
+            'message' => 'Currency exchanged successfully',
+            'from_account' => $fromAccount,
+            'to_account' => $toAccount,
+            'amount' => $amount,
+            'exchange_rate' => $exchangeRate,
+            'currency' => $currency, // Return the currency in the response
+        ], 201);
+    }
+    
+
+
     /**
      * Store a new transaction.
      */

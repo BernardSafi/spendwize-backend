@@ -54,5 +54,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Income transactions
     Route::post('/transactions/income', [TransactionController::class, 'addIncome']);
     Route::post('/transactions/expense', [TransactionController::class, 'addexpense']);
+    Route::post('/transactions/exchange', [TransactionController::class, 'exchangeCurrency']);
 });
 
