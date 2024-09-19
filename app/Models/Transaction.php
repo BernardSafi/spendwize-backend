@@ -19,6 +19,7 @@ class Transaction extends Model
         'to_account', 
         'exchange_rate',
         'description', 
+        'date',
     ];
 
     /**
