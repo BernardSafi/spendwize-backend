@@ -43,7 +43,8 @@ class TransactionController extends Controller
             'from_account' => 'required|string|in:wallet_usd,wallet_lbp',
             'to_account' => 'required|string|in:wallet_usd,wallet_lbp',
             'amount' => 'required|numeric|min:1',
-            'exchange_rate' => 'required|numeric|min:0.01'
+            'exchange_rate' => 'required|numeric|min:0.01',
+            'date' => 'nullable|date', // Validate the date
         ]);
     
         $fromAccount = $validatedData['from_account'];
@@ -88,7 +89,7 @@ class TransactionController extends Controller
             'amount' => $amount,
             'exchange_rate' => $exchangeRate,
             'currency' => $currency,
-            'date' => now() // Add the date of the transaction
+            'date' => $validatedData['date'] ?? now() // Use provided date or current date
         ]);
     
         return response()->json([
@@ -470,6 +471,7 @@ class TransactionController extends Controller
                 'currency' => 'required|in:USD,LBP',
                 'description' => 'nullable|string',
                 'income_type' => 'required|string|exists:income_types,name', // Validate income type name
+                'date' => 'required|date', // Validate the provided date from frontend
             ]);
     
             // Log validation success
@@ -507,7 +509,7 @@ class TransactionController extends Controller
             'currency' => $validatedData['currency'],
             'description' => $validatedData['description'],
             'subtype' => $incomeType->name, // Use the retrieved income type ID
-            'date' =>  now(), // Use provided date or current date
+            'date' => $validatedData['date'], // Use the provided date from frontend
         ]);
     
         Log::info('Income transaction recorded.', ['transaction' => $transaction]);
@@ -517,6 +519,7 @@ class TransactionController extends Controller
             'transaction' => $transaction,
         ], 201);
     }
+    
 
     public function addExpense(Request $request)
 {
@@ -539,6 +542,7 @@ class TransactionController extends Controller
             'currency' => 'required|in:USD,LBP',
             'description' => 'nullable|string',
             'expense_type' => 'required|string|exists:expense_types,name', // Validate expense type name
+            'date' => 'required|date', // Validate the provided date from frontend
         ]);
 
         // Log validation success
@@ -576,7 +580,7 @@ class TransactionController extends Controller
         'currency' => $validatedData['currency'],
         'description' => $validatedData['description'],
         'subtype' => $expenseType->name, // Use the retrieved expense type ID
-        'date' =>  now() // Use provided date or current date
+        'date' => $validatedData['date'],
     ]);
 
     Log::info('Expense transaction recorded.', ['transaction' => $transaction]);
