@@ -467,7 +467,7 @@ class TransactionController extends Controller
         try {
             // Validate input
             $validatedData = $request->validate([
-                'amount' => 'required|numeric|min:1',
+                'amount' => 'required|numeric|min:0.1',
                 'currency' => 'required|in:USD,LBP',
                 'description' => 'nullable|string',
                 'income_type' => 'required|string|exists:income_types,name', // Validate income type name
