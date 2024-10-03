@@ -455,13 +455,10 @@ class TransactionController extends Controller
     
         // Check if user is authenticated
         if ($user) {
-            Log::info('User authenticated successfully', ['user_id' => $user->id]);
         } else {
-            Log::warning('User authentication failed');
             return response()->json(['message' => 'User not authenticated'], 401);
         }
     
-        Log::info("Starting income addition...");
     
         // Validate input
         try {
@@ -474,11 +471,9 @@ class TransactionController extends Controller
                 'date' => 'required|date', // Validate the provided date from frontend
             ]);
     
-            // Log validation success
-            Log::info("Validation passed", ['data' => $validatedData]);
+
     
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error("Validation failed", ['errors' => $e->validator->errors()->all()]);
             return response()->json(['message' => 'Validation failed', 'errors' => $e->validator->errors()], 422);
         }
     
@@ -512,8 +507,6 @@ class TransactionController extends Controller
             'date' => $validatedData['date'], // Use the provided date from frontend
         ]);
     
-        Log::info('Income transaction recorded.', ['transaction' => $transaction]);
-    
         return response()->json([
             'message' => 'Income added successfully',
             'transaction' => $transaction,
@@ -527,13 +520,12 @@ class TransactionController extends Controller
 
     // Check if user is authenticated
     if ($user) {
-        Log::info('User authenticated successfully', ['user_id' => $user->id]);
+
     } else {
-        Log::warning('User authentication failed');
         return response()->json(['message' => 'User not authenticated'], 401);
     }
 
-    Log::info("Starting expense addition...");
+
 
     // Validate input
     try {
@@ -545,11 +537,8 @@ class TransactionController extends Controller
             'date' => 'required|date', // Validate the provided date from frontend
         ]);
 
-        // Log validation success
-        Log::info("Validation passed", ['data' => $validatedData]);
 
     } catch (\Illuminate\Validation\ValidationException $e) {
-        Log::error("Validation failed", ['errors' => $e->validator->errors()->all()]);
         return response()->json(['message' => 'Validation failed', 'errors' => $e->validator->errors()], 422);
     }
 
@@ -582,8 +571,6 @@ class TransactionController extends Controller
         'subtype' => $expenseType->name, // Use the retrieved expense type ID
         'date' => $validatedData['date'],
     ]);
-
-    Log::info('Expense transaction recorded.', ['transaction' => $transaction]);
 
     return response()->json([
         'message' => 'Expense added successfully',

@@ -22,9 +22,7 @@ class Transaction extends Model
         'date',
     ];
 
-    /**
-     * Define relationship to the User model.
-     */
+
     public function user()
     {
         return $this->belongsTo(User::class);
