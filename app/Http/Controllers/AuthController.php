@@ -35,10 +35,13 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        try {
+            // Validate the request data
+            $validatedData = $request->validate([
+                'email' => 'required|email',
+                'password' => 'required',
+            ]);
+        
     
         // Check if the user exists
         $user = User::where('email', $request->email)->first();
@@ -48,15 +51,18 @@ class AuthController extends Controller
             return response()->json(['error' => 'User does not exist'], 404);
         }
     
-        // User exists, now check the password
+        // Verify the password using Auth::attempt
         if (!Auth::attempt($request->only('email', 'password'))) {
             // Password is incorrect
             return response()->json(['error' => 'Wrong password'], 401);
         }
     
-        // Generate token for the authenticated user
+        // Generate a token for the authenticated user
         $token = $user->createToken('auth_token')->plainTextToken;
     
-        return response()->json(['token' => $token]);
+        return response()->json(['token' => $token], 200);
+     } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
     }
+}
 }
