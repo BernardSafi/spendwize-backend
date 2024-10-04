@@ -44,7 +44,7 @@ class TransactionController extends Controller
             'to_account' => 'required|string|in:wallet_usd,wallet_lbp',
             'amount' => 'required|numeric|min:1',
             'exchange_rate' => 'required|numeric|min:0.01',
-            'date' => 'nullable|date', // Validate the date
+            'date' => 'required|date', // Validate the date
         ]);
     
         $fromAccount = $validatedData['from_account'];
@@ -261,7 +261,7 @@ class TransactionController extends Controller
     
         $validatedData = $request->validate([
             'amount' => 'required|numeric|min:1',
-            'date' => 'nullable|date', // Validate the date
+            'date' => 'required|date', // Validate the date
         ]);
     
         $wallet = $user->wallet; 
@@ -307,7 +307,7 @@ class TransactionController extends Controller
         // Validate input
         $validatedData = $request->validate([
             'amount' => 'required|numeric|min:1',
-            'date' => 'nullable|date', // Validate the date
+            'date' => 'required|date', // Validate the date
         ]);
     
         // Get user's wallet and savings account
@@ -356,7 +356,7 @@ class TransactionController extends Controller
     // Validate input
     $validatedData = $request->validate([
         'amount' => 'required|numeric|min:1',
-        'date' => 'nullable|date', // Validate the date
+        'date' => 'required|date', // Validate the date
     ]);
 
     // Get user's wallet and savings account
@@ -408,7 +408,7 @@ class TransactionController extends Controller
         // Validate input
         $validatedData = $request->validate([
             'amount' => 'required|numeric|min:1',
-            'date' => 'nullable|date', // Validate the date
+            'date' => 'required|date', // Validate the date
         ]);
     
         // Get user's wallet and savings account
@@ -514,18 +514,14 @@ class TransactionController extends Controller
     }
     
 
-    public function addExpense(Request $request)
+public function addExpense(Request $request)
 {
     $user = Auth::user(); // Get the authenticated user
 
     // Check if user is authenticated
-    if ($user) {
-
-    } else {
+    if (!$user) {
         return response()->json(['message' => 'User not authenticated'], 401);
     }
-
-
 
     // Validate input
     try {
@@ -536,8 +532,6 @@ class TransactionController extends Controller
             'expense_type' => 'required|string|exists:expense_types,name', // Validate expense type name
             'date' => 'required|date', // Validate the provided date from frontend
         ]);
-
-
     } catch (\Illuminate\Validation\ValidationException $e) {
         return response()->json(['message' => 'Validation failed', 'errors' => $e->validator->errors()], 422);
     }
@@ -551,11 +545,21 @@ class TransactionController extends Controller
     // Get user's wallet
     $wallet = $user->wallet; // Assuming the user has a relationship with a wallet
 
-    // Update wallet balance based on the currency
+    // Check if the wallet has enough balance for the selected currency
     if ($validatedData['currency'] == 'USD') {
-        $wallet->usd_balance -= $validatedData['amount']; // Subtract from USD balance
+        if ($wallet->usd_balance >= $validatedData['amount']) {
+            // Subtract from USD balance only if sufficient funds are available
+            $wallet->usd_balance -= $validatedData['amount'];
+        } else {
+            return response()->json(['message' => 'Insufficient USD balance in wallet'], 400);
+        }
     } elseif ($validatedData['currency'] == 'LBP') {
-        $wallet->lbp_balance -= $validatedData['amount']; // Subtract from LBP balance
+        if ($wallet->lbp_balance >= $validatedData['amount']) {
+            // Subtract from LBP balance only if sufficient funds are available
+            $wallet->lbp_balance -= $validatedData['amount'];
+        } else {
+            return response()->json(['message' => 'Insufficient LBP balance in wallet'], 400);
+        }
     }
 
     // Save the updated wallet balance
@@ -568,7 +572,7 @@ class TransactionController extends Controller
         'amount' => $validatedData['amount'],
         'currency' => $validatedData['currency'],
         'description' => $validatedData['description'],
-        'subtype' => $expenseType->name, // Use the retrieved expense type ID
+        'subtype' => $expenseType->name, // Use the retrieved expense type name
         'date' => $validatedData['date'],
     ]);
 
@@ -577,6 +581,8 @@ class TransactionController extends Controller
         'transaction' => $transaction,
     ], 201);
 }
+
+    
 
     
 }
