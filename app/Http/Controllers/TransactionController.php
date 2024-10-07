@@ -255,24 +255,30 @@ class TransactionController extends Controller
     
 
     // Transfer from Wallet LBP to Savings LBP
+
+
     public function walletToSavingLbp(Request $request)
     {
         $user = Auth::user();
     
-        $validatedData = $request->validate([
-            'amount' => 'required|numeric|min:1',
-            'date' => 'required|date', // Validate the date
-        ]);
-    
-        $wallet = $user->wallet; 
-        $savings = $user->savingsAccounts; 
-    
-        $walletBalance = $wallet->lbp_balance ?? 0;
-        if ($walletBalance < $validatedData['amount']) {
-            return response()->json(['message' => 'Insufficient balance in Wallet LBP.'], 400);
-        }
-    
         try {
+            // Validate input
+            $validatedData = $request->validate([
+                'amount' => 'required|numeric|min:1',
+                'date' => 'required|date', // Validate the date
+            ]);
+    
+            // Get user's wallet and savings account
+            $wallet = $user->wallet; 
+            $savings = $user->savingsAccounts; 
+    
+            // Validate if the user has sufficient balance in Wallet LBP
+            $walletBalance = $wallet->lbp_balance ?? 0; // Use default value if null
+            if ($walletBalance < $validatedData['amount']) {
+                return response()->json(['message' => 'Insufficient balance in Wallet LBP.'], 400);
+            }
+    
+            // Create the transfer transaction
             $transaction = Transaction::create([
                 'user_id' => $user->id,
                 'wallet_id' => $wallet->id,
@@ -285,42 +291,56 @@ class TransactionController extends Controller
                 'date' => $validatedData['date'] ?? now() // Use provided date or current date
             ]);
     
+            // Update balances
             $wallet->lbp_balance -= $validatedData['amount'];
             $savings->lbp_balance += $validatedData['amount'];
     
+            // Save the updated balances
             $wallet->save();
             $savings->save();
     
             return response()->json($transaction, 201);
+        } catch (ValidationException $e) {
+            // Handle validation errors
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $e->validator->errors()
+            ], 422);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database-related errors
+            return response()->json(['message' => 'Database error: ' . $e->getMessage()], 500);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Transfer failed, please try again.'], 500);
+            // Handle all other errors
+            return response()->json(['message' => 'Transfer failed, please try again. Error: ' . $e->getMessage()], 500);
         }
     }
+    
     
 
 
     // Transfer from Savings LBP to Wallet LBP
+
     public function savingToWalletLbp(Request $request)
     {
         $user = Auth::user(); // Get the authenticated user
     
-        // Validate input
-        $validatedData = $request->validate([
-            'amount' => 'required|numeric|min:1',
-            'date' => 'required|date', // Validate the date
-        ]);
-    
-        // Get user's wallet and savings account
-        $wallet = $user->wallet; // Assuming this is the correct relationship
-        $savings = $user->savingsAccounts; // Assuming this is the correct relationship
-    
-        // Validate if the user has sufficient balance in Savings LBP
-        $savingsBalance = $savings->lbp_balance ?? 0; // Use default value if null
-        if ($savingsBalance < $validatedData['amount']) {
-            return response()->json(['message' => 'Insufficient balance in Savings LBP.'], 400);
-        }
-    
         try {
+            // Validate input
+            $validatedData = $request->validate([
+                'amount' => 'required|numeric|min:1',
+                'date' => 'required|date', // Validate the date
+            ]);
+    
+            // Get user's wallet and savings account
+            $wallet = $user->wallet; // Assuming this is the correct relationship
+            $savings = $user->savingsAccounts; // Assuming this is the correct relationship
+    
+            // Validate if the user has sufficient balance in Savings LBP
+            $savingsBalance = $savings->lbp_balance ?? 0; // Use default value if null
+            if ($savingsBalance < $validatedData['amount']) {
+                return response()->json(['message' => 'Insufficient balance in Savings LBP.'], 400);
+            }
+    
             // Create the transfer transaction
             $transaction = Transaction::create([
                 'user_id' => $user->id,
@@ -343,85 +363,45 @@ class TransactionController extends Controller
             $wallet->save();
     
             return response()->json($transaction, 201);
+        } catch (ValidationException $e) {
+            // Handle validation errors
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $e->validator->errors()
+            ], 422);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database-related errors
+            return response()->json(['message' => 'Database error: ' . $e->getMessage()], 500);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Transfer failed, please try again.'], 500);
+            // Handle all other errors
+            return response()->json(['message' => 'Transfer failed, please try again. Error: ' . $e->getMessage()], 500);
         }
     }
-
-    // Transfer from Wallet USD to Savings USD
-    public function walletToSavingUsd(Request $request)
-{
-    $user = Auth::user(); // Get the authenticated user
-
-    // Validate input
-    $validatedData = $request->validate([
-        'amount' => 'required|numeric|min:1',
-        'date' => 'required|date', // Validate the date
-    ]);
-
-    // Get user's wallet and savings account
-    $wallet = $user->wallet; 
-    $savings = $user->savingsAccounts; 
-
-    // Validate if the user has sufficient balance in Wallet USD
-    $walletBalance = $wallet->usd_balance ?? 0; // Use default value if null
-    if ($walletBalance < $validatedData['amount']) {
-        return response()->json(['message' => 'Insufficient balance in Wallet USD.'], 400);
-    }
-
-    try {
-        // Create the transfer transaction
-        $transaction = Transaction::create([
-            'user_id' => $user->id,
-            'wallet_id' => $wallet->id, // Assuming this is needed for reference
-            'savings_account_id' => $savings->id, // Assuming this is needed for reference
-            'type' => 'transfer',
-            'amount' => $validatedData['amount'],
-            'currency' => 'USD',
-            'from_account' => 'wallet_usd',
-            'to_account' => 'savings_usd',
-            'date' => $validatedData['date'] ?? now() // Use provided date or current date
-        ]);
-
-        // Update balances
-        $wallet->usd_balance -= $validatedData['amount'];
-        $savings->usd_balance += $validatedData['amount'];
-
-        // Save the updated balances
-        $wallet->save();
-        $savings->save();
-
-        return response()->json($transaction, 201);
-    } catch (\Exception $e) {
-        // Log the exception for debugging purposes
-        return response()->json(['message' => 'Transfer failed, please try again.'], 500);
-    }
-}
-
     
 
-    // Transfer from Savings USD to Wallet USD
-    public function savingToWalletUsd(Request $request)
+    // Transfer from Wallet USD to Savings USD
+
+    public function walletToSavingUsd(Request $request)
     {
         $user = Auth::user(); // Get the authenticated user
     
-        // Validate input
-        $validatedData = $request->validate([
-            'amount' => 'required|numeric|min:1',
-            'date' => 'required|date', // Validate the date
-        ]);
-    
-        // Get user's wallet and savings account
-        $wallet = $user->wallet; // Assuming this is the correct relationship
-        $savings = $user->savingsAccounts; // Assuming this is the correct relationship
-    
-        // Validate if the user has sufficient balance in Savings USD
-        $savingsBalance = $savings->usd_balance ?? 0; // Use default value if null
-        if ($savingsBalance < $validatedData['amount']) {
-            return response()->json(['message' => 'Insufficient balance in Savings USD.'], 400);
-        }
-    
         try {
+            // Validate input
+            $validatedData = $request->validate([
+                'amount' => 'required|numeric|min:1',
+                'date' => 'required|date', // Validate the date
+            ]);
+    
+            // Get user's wallet and savings account
+            $wallet = $user->wallet; 
+            $savings = $user->savingsAccounts; 
+    
+            // Validate if the user has sufficient balance in Wallet USD
+            $walletBalance = $wallet->usd_balance ?? 0; // Use default value if null
+            if ($walletBalance < $validatedData['amount']) {
+                return response()->json(['message' => 'Insufficient balance in Wallet USD.'], 400);
+            }
+    
             // Create the transfer transaction
             $transaction = Transaction::create([
                 'user_id' => $user->id,
@@ -430,9 +410,72 @@ class TransactionController extends Controller
                 'type' => 'transfer',
                 'amount' => $validatedData['amount'],
                 'currency' => 'USD',
+                'from_account' => 'wallet_usd',
+                'to_account' => 'savings_usd',
+                'date' => $validatedData['date'] ?? now() // Use provided date or current date
+            ]);
+    
+            // Update balances
+            $wallet->usd_balance -= $validatedData['amount'];
+            $savings->usd_balance += $validatedData['amount'];
+    
+            // Save the updated balances
+            $wallet->save();
+            $savings->save();
+    
+            return response()->json($transaction, 201);
+        } catch (ValidationException $e) {
+            // Handle validation errors
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $e->validator->errors()
+            ], 422);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database-related errors
+            return response()->json(['message' => 'Database error: ' . $e->getMessage()], 500);
+        } catch (\Exception $e) {
+            // Handle all other errors
+            return response()->json(['message' => 'Transfer failed, please try again. Error: ' . $e->getMessage()], 500);
+        }
+    }
+    
+
+    
+
+    // Transfer from Savings USD to Wallet USD
+
+    public function savingToWalletUsd(Request $request)
+    {
+        $user = Auth::user(); // Get the authenticated user
+    
+        try {
+            // Validate input
+            $validatedData = $request->validate([
+                'amount' => 'required|numeric|min:1',
+                'date' => 'required|date', // Validate the date
+            ]);
+    
+            // Get user's wallet and savings account
+            $wallet = $user->wallet; 
+            $savings = $user->savingsAccounts; 
+    
+            // Validate if the user has sufficient balance in Savings USD
+            $savingsBalance = $savings->usd_balance ?? 0; 
+            if ($savingsBalance < $validatedData['amount']) {
+                return response()->json(['message' => 'Insufficient balance in Savings USD.'], 400);
+            }
+    
+            // Create the transfer transaction
+            $transaction = Transaction::create([
+                'user_id' => $user->id,
+                'wallet_id' => $wallet->id, 
+                'savings_account_id' => $savings->id, 
+                'type' => 'transfer',
+                'amount' => $validatedData['amount'],
+                'currency' => 'USD',
                 'from_account' => 'savings_usd',
                 'to_account' => 'wallet_usd',
-                'date' => $validatedData['date'] ?? now() // Use provided date or current date
+                'date' => $validatedData['date'] ?? now()
             ]);
     
             // Update balances
@@ -444,10 +487,22 @@ class TransactionController extends Controller
             $wallet->save();
     
             return response()->json($transaction, 201);
+        } catch (ValidationException $e) {
+            // Handle validation errors
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $e->validator->errors()
+            ], 422);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database-related errors
+            return response()->json(['message' => 'Database error: ' . $e->getMessage()], 500);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Transfer failed, please try again.'], 500);
+            // Handle all other errors
+            return response()->json(['message' => 'Transfer failed, please try again. Error: ' . $e->getMessage()], 500);
         }
     }
+    
+    
 
     public function addIncome(Request $request)
     {
