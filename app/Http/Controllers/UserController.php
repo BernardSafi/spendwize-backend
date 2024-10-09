@@ -16,7 +16,6 @@ class UserController extends Controller
             return response()->json([
                 'name' => $user->name,
                 'email' => $user->email,
-                // Add any other user details you want to return
             ]);
         } else {
             return response()->json(['error' => 'User not authenticated'], 401);

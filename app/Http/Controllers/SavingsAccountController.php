@@ -27,7 +27,7 @@ class SavingsAccountController extends Controller
     $wallet->save();
     $savings->save();
 
-    // Log the transaction
+    
     Transaction::create([
         'user_id' => $user->id,
         'wallet_id' => $wallet->id,
@@ -46,12 +46,12 @@ public function getSaving(Request $request)
     $user = Auth::user();
 
     if ($user) {
-        // Retrieve the wallet balance using the correct relationship method
+        // Retrieve the wallet balance
         $saving = $user->savingsAccounts; 
         
         if ($saving) {
-            $usd_balance = $saving->usd_balance ?? 0.0; // Use null coalescing operator
-            $lbp_balance = $saving->lbp_balance ?? 0.0; // Use null coalescing operator
+            $usd_balance = $saving->usd_balance ?? 0.0; 
+            $lbp_balance = $saving->lbp_balance ?? 0.0; 
 
             return response()->json([
                 'usd_balance' => $usd_balance,

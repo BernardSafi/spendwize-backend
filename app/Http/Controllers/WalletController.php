@@ -18,8 +18,8 @@ public function getWallet(Request $request)
         $wallet = $user->wallet; 
         
         if ($wallet) {
-            $usd_balance = $wallet->usd_balance ?? 0.0; // Use null coalescing operator
-            $lbp_balance = $wallet->lbp_balance ?? 0.0; // Use null coalescing operator
+            $usd_balance = $wallet->usd_balance ?? 0.0; 
+            $lbp_balance = $wallet->lbp_balance ?? 0.0; 
 
             return response()->json([
                 'usd_balance' => $usd_balance,

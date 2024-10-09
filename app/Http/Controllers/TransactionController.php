@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Log;
 
 class TransactionController extends Controller
 {
-    /**
-     * Display a listing of the transactions.
-     */
+    
+     // Display a listing of the transactions.
+     
     public function index()
     {
         // Ensure the user is authenticated
@@ -39,75 +39,90 @@ class TransactionController extends Controller
             return response()->json(['message' => 'User not authenticated'], 401);
         }
     
-        $validatedData = $request->validate([
-            'from_account' => 'required|string|in:wallet_usd,wallet_lbp',
-            'to_account' => 'required|string|in:wallet_usd,wallet_lbp',
-            'amount' => 'required|numeric|min:1',
-            'exchange_rate' => 'required|numeric|min:0.01',
-            'date' => 'required|date', // Validate the date
-        ]);
+        try {
+            $validatedData = $request->validate([
+                'from_account' => 'required|string|in:wallet_usd,wallet_lbp',
+                'to_account' => 'required|string|in:wallet_usd,wallet_lbp',
+                'amount' => 'required|numeric|min:1',
+                'exchange_rate' => 'required|numeric|min:0.01',
+                'date' => 'required|date',
+            ]);
     
-        $fromAccount = $validatedData['from_account'];
-        $toAccount = $validatedData['to_account'];
-        $amount = $validatedData['amount'];
-        $exchangeRate = $validatedData['exchange_rate'];
+            $fromAccount = $validatedData['from_account'];
+            $toAccount = $validatedData['to_account'];
+            $amount = $validatedData['amount'];
+            $exchangeRate = $validatedData['exchange_rate'];
     
-        if ($fromAccount === $toAccount) {
-            return response()->json(['message' => 'Cannot exchange within the same account'], 400);
-        }
-    
-        $wallet = $user->wallet;
-    
-        if (!$wallet) {
-            return response()->json(['message' => 'Wallet not found'], 404);
-        }
-    
-        if ($fromAccount === 'wallet_usd' && $toAccount === 'wallet_lbp') {
-            if ($wallet->usd_balance < $amount) {
-                return response()->json(['message' => 'Insufficient USD balance'], 400);
+            // Prevent exchanging within the same account
+            if ($fromAccount === $toAccount) {
+                return response()->json(['message' => 'Cannot exchange within the same account'], 400);
             }
-            $wallet->usd_balance -= $amount;
-            $wallet->lbp_balance += $amount * $exchangeRate;
     
-        } elseif ($fromAccount === 'wallet_lbp' && $toAccount === 'wallet_usd') {
-            if ($wallet->lbp_balance < $amount) {
-                return response()->json(['message' => 'Insufficient LBP balance'], 400);
+            $wallet = $user->wallet;
+    
+            if (!$wallet) {
+                return response()->json(['message' => 'Wallet not found'], 404);
             }
-            $wallet->lbp_balance -= $amount;
-            $wallet->usd_balance += $amount / $exchangeRate;
+    
+            // Perform balance checks and update balances
+            if ($fromAccount === 'wallet_usd' && $toAccount === 'wallet_lbp') {
+                if ($wallet->usd_balance < $amount) {
+                    return response()->json(['message' => 'Insufficient USD balance'], 400);
+                }
+                $wallet->usd_balance -= $amount;
+                $wallet->lbp_balance += $amount * $exchangeRate;
+    
+            } elseif ($fromAccount === 'wallet_lbp' && $toAccount === 'wallet_usd') {
+                if ($wallet->lbp_balance < $amount) {
+                    return response()->json(['message' => 'Insufficient LBP balance'], 400);
+                }
+                $wallet->lbp_balance -= $amount;
+                $wallet->usd_balance += $amount / $exchangeRate;
+            }
+    
+            // Save wallet changes
+            $wallet->save();
+    
+            // Record the transaction
+            Transaction::create([
+                'user_id' => $user->id,
+                'type' => 'exchange',
+                'from_account' => $fromAccount,
+                'to_account' => $toAccount,
+                'amount' => $amount,
+                'exchange_rate' => $exchangeRate,
+                'currency' => ($fromAccount === 'wallet_usd') ? 'USD' : 'LBP',
+                'date' => $validatedData['date'], // Use provided date
+            ]);
+    
+            return response()->json([
+                'message' => 'Currency exchanged successfully',
+                'from_account' => $fromAccount,
+                'to_account' => $toAccount,
+                'amount' => $amount,
+                'exchange_rate' => $exchangeRate,
+                'currency' => ($fromAccount === 'wallet_usd') ? 'USD' : 'LBP',
+            ], 201);
+    
+        } catch (ValidationException $e) {
+            // Return validation errors
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $e->validator->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            // Catch any other exceptions and return a generic error message
+            return response()->json(['message' => 'An error occurred: ' . $e->getMessage()], 500);
         }
-    
-        $wallet->save();
-    
-        $currency = ($fromAccount === 'wallet_usd') ? 'USD' : 'LBP';
-    
-        Transaction::create([
-            'user_id' => $user->id,
-            'type' => 'exchange',
-            'from_account' => $fromAccount,
-            'to_account' => $toAccount,
-            'amount' => $amount,
-            'exchange_rate' => $exchangeRate,
-            'currency' => $currency,
-            'date' => $validatedData['date'] ?? now() // Use provided date or current date
-        ]);
-    
-        return response()->json([
-            'message' => 'Currency exchanged successfully',
-            'from_account' => $fromAccount,
-            'to_account' => $toAccount,
-            'amount' => $amount,
-            'exchange_rate' => $exchangeRate,
-            'currency' => $currency
-        ], 201);
     }
     
     
+    
 
 
-    /**
-     * Store a new transaction.
-     */
+    
+     // Store a new transaction.
+     
     public function store(Request $request)
     {
         $validatedData = $request->validate([
@@ -120,7 +135,7 @@ class TransactionController extends Controller
             'to_account' => 'nullable|string',
             'exchange_rate' => 'nullable|numeric',
             'description' => 'nullable|string',
-            'date' => 'nullable|date', // Validate the date
+            'date' => 'nullable|date', 
         ]);
     
         $transaction = Transaction::create($validatedData);
@@ -129,18 +144,17 @@ class TransactionController extends Controller
     }
     
 
-    /**
-     * Display the specified transaction.
-     */
+    
+      //Display the specified transaction.
+     
     public function show($id)
     {
         $transaction = Transaction::with('user')->findOrFail($id);
         return response()->json($transaction);
     }
 
-    /**
-     * Update the specified transaction.
-     */
+    // Update the specified transaction.
+     
     public function update(Request $request, $id)
     {
         $validatedData = $request->validate([
@@ -152,7 +166,7 @@ class TransactionController extends Controller
             'to_account' => 'nullable|string',
             'exchange_rate' => 'nullable|numeric',
             'description' => 'nullable|string',
-            'date' => 'nullable|date', // Validate the date
+            'date' => 'nullable|date', 
         ]);
     
         $transaction = Transaction::findOrFail($id);
@@ -162,9 +176,9 @@ class TransactionController extends Controller
     }
     
 
-    /**
-     * Remove the specified transaction.
-     */
+    
+     // Remove the specified transaction.
+     
     public function destroy($id)
     {
         // Get the authenticated user
@@ -184,7 +198,7 @@ class TransactionController extends Controller
         }
     
         // Get user's wallet
-        $wallet = $user->wallet; // Assuming the user has a relationship with a wallet
+        $wallet = $user->wallet; 
     
         // Handle different transaction types
         switch ($transaction->type) {
@@ -225,7 +239,7 @@ class TransactionController extends Controller
     
             case 'exchange':
                 // For exchange, reverse the conversion between LBP and USD
-                $exchangeRate = $transaction->exchange_rate; // Assuming the exchange rate is stored in the transaction
+                $exchangeRate = $transaction->exchange_rate; 
     
                 if ($transaction->from_account === 'wallet_usd' && $transaction->to_account === 'wallet_lbp') {
                     // Reverse exchange from USD to LBP
@@ -244,7 +258,7 @@ class TransactionController extends Controller
     
         // Save the updated wallet and savings account balances
         $wallet->save();
-        $user->savingsAccounts->save(); // Ensure the savings account is also saved if applicable
+        $user->savingsAccounts->save();
     
         // Delete the transaction
         $transaction->delete();
@@ -265,7 +279,7 @@ class TransactionController extends Controller
             // Validate input
             $validatedData = $request->validate([
                 'amount' => 'required|numeric|min:1',
-                'date' => 'required|date', // Validate the date
+                'date' => 'required|date', 
             ]);
     
             // Get user's wallet and savings account
@@ -273,7 +287,7 @@ class TransactionController extends Controller
             $savings = $user->savingsAccounts; 
     
             // Validate if the user has sufficient balance in Wallet LBP
-            $walletBalance = $wallet->lbp_balance ?? 0; // Use default value if null
+            $walletBalance = $wallet->lbp_balance ?? 0; 
             if ($walletBalance < $validatedData['amount']) {
                 return response()->json(['message' => 'Insufficient balance in Wallet LBP.'], 400);
             }
@@ -288,7 +302,7 @@ class TransactionController extends Controller
                 'currency' => 'LBP',
                 'from_account' => 'wallet_lbp',
                 'to_account' => 'savings_lbp',
-                'date' => $validatedData['date'] ?? now() // Use provided date or current date
+                'date' => $validatedData['date'] ?? now() 
             ]);
     
             // Update balances
@@ -328,15 +342,15 @@ class TransactionController extends Controller
             // Validate input
             $validatedData = $request->validate([
                 'amount' => 'required|numeric|min:1',
-                'date' => 'required|date', // Validate the date
+                'date' => 'required|date', 
             ]);
     
             // Get user's wallet and savings account
-            $wallet = $user->wallet; // Assuming this is the correct relationship
-            $savings = $user->savingsAccounts; // Assuming this is the correct relationship
+            $wallet = $user->wallet; 
+            $savings = $user->savingsAccounts; 
     
             // Validate if the user has sufficient balance in Savings LBP
-            $savingsBalance = $savings->lbp_balance ?? 0; // Use default value if null
+            $savingsBalance = $savings->lbp_balance ?? 0; 
             if ($savingsBalance < $validatedData['amount']) {
                 return response()->json(['message' => 'Insufficient balance in Savings LBP.'], 400);
             }
@@ -344,14 +358,14 @@ class TransactionController extends Controller
             // Create the transfer transaction
             $transaction = Transaction::create([
                 'user_id' => $user->id,
-                'wallet_id' => $wallet->id, // Assuming this is needed for reference
-                'savings_account_id' => $savings->id, // Assuming this is needed for reference
+                'wallet_id' => $wallet->id, 
+                'savings_account_id' => $savings->id, 
                 'type' => 'transfer',
                 'amount' => $validatedData['amount'],
                 'currency' => 'LBP',
                 'from_account' => 'savings_lbp',
                 'to_account' => 'wallet_lbp',
-                'date' => $validatedData['date'] ?? now() // Use provided date or current date
+                'date' => $validatedData['date'] ?? now() 
             ]);
     
             // Update balances
@@ -389,7 +403,7 @@ class TransactionController extends Controller
             // Validate input
             $validatedData = $request->validate([
                 'amount' => 'required|numeric|min:1',
-                'date' => 'required|date', // Validate the date
+                'date' => 'required|date', 
             ]);
     
             // Get user's wallet and savings account
@@ -397,7 +411,7 @@ class TransactionController extends Controller
             $savings = $user->savingsAccounts; 
     
             // Validate if the user has sufficient balance in Wallet USD
-            $walletBalance = $wallet->usd_balance ?? 0; // Use default value if null
+            $walletBalance = $wallet->usd_balance ?? 0; 
             if ($walletBalance < $validatedData['amount']) {
                 return response()->json(['message' => 'Insufficient balance in Wallet USD.'], 400);
             }
@@ -405,14 +419,14 @@ class TransactionController extends Controller
             // Create the transfer transaction
             $transaction = Transaction::create([
                 'user_id' => $user->id,
-                'wallet_id' => $wallet->id, // Assuming this is needed for reference
-                'savings_account_id' => $savings->id, // Assuming this is needed for reference
+                'wallet_id' => $wallet->id, 
+                'savings_account_id' => $savings->id, 
                 'type' => 'transfer',
                 'amount' => $validatedData['amount'],
                 'currency' => 'USD',
                 'from_account' => 'wallet_usd',
                 'to_account' => 'savings_usd',
-                'date' => $validatedData['date'] ?? now() // Use provided date or current date
+                'date' => $validatedData['date'] ?? now() 
             ]);
     
             // Update balances
@@ -452,7 +466,7 @@ class TransactionController extends Controller
             // Validate input
             $validatedData = $request->validate([
                 'amount' => 'required|numeric|min:1',
-                'date' => 'required|date', // Validate the date
+                'date' => 'required|date', 
             ]);
     
             // Get user's wallet and savings account
@@ -522,8 +536,8 @@ class TransactionController extends Controller
                 'amount' => 'required|numeric|min:0.1',
                 'currency' => 'required|in:USD,LBP',
                 'description' => 'nullable|string',
-                'income_type' => 'required|string|exists:income_types,name', // Validate income type name
-                'date' => 'required|date', // Validate the provided date from frontend
+                'income_type' => 'required|string|exists:income_types,name', 
+                'date' => 'required|date', 
             ]);
     
 
@@ -539,7 +553,7 @@ class TransactionController extends Controller
         }
     
         // Get user's wallet
-        $wallet = $user->wallet; // Assuming the user has a relationship with a wallet
+        $wallet = $user->wallet; 
     
         // Update wallet balance based on the currency
         if ($validatedData['currency'] == 'USD') {
@@ -558,8 +572,8 @@ class TransactionController extends Controller
             'amount' => $validatedData['amount'],
             'currency' => $validatedData['currency'],
             'description' => $validatedData['description'],
-            'subtype' => $incomeType->name, // Use the retrieved income type ID
-            'date' => $validatedData['date'], // Use the provided date from frontend
+            'subtype' => $incomeType->name, 
+            'date' => $validatedData['date'], 
         ]);
     
         return response()->json([
@@ -584,8 +598,8 @@ public function addExpense(Request $request)
             'amount' => 'required|numeric|min:1',
             'currency' => 'required|in:USD,LBP',
             'description' => 'nullable|string',
-            'expense_type' => 'required|string|exists:expense_types,name', // Validate expense type name
-            'date' => 'required|date', // Validate the provided date from frontend
+            'expense_type' => 'required|string|exists:expense_types,name', 
+            'date' => 'required|date', 
         ]);
     } catch (\Illuminate\Validation\ValidationException $e) {
         return response()->json(['message' => 'Validation failed', 'errors' => $e->validator->errors()], 422);
@@ -598,7 +612,7 @@ public function addExpense(Request $request)
     }
 
     // Get user's wallet
-    $wallet = $user->wallet; // Assuming the user has a relationship with a wallet
+    $wallet = $user->wallet; 
 
     // Check if the wallet has enough balance for the selected currency
     if ($validatedData['currency'] == 'USD') {
@@ -627,7 +641,7 @@ public function addExpense(Request $request)
         'amount' => $validatedData['amount'],
         'currency' => $validatedData['currency'],
         'description' => $validatedData['description'],
-        'subtype' => $expenseType->name, // Use the retrieved expense type name
+        'subtype' => $expenseType->name, 
         'date' => $validatedData['date'],
     ]);
 

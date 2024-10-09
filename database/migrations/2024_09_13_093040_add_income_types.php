@@ -21,7 +21,7 @@ class AddIncomeTypes extends Migration
             ['name' => 'Investment'],
             ['name' => 'Freelance'],
             ['name' => 'Other'],
-            // Add any additional income types as needed
+        
         ]);
     }
 
@@ -32,7 +32,7 @@ class AddIncomeTypes extends Migration
      */
     public function down()
     {
-        // Optionally, you can remove the income types if you need to roll back the migration
+      
         DB::table('income_types')->whereIn('name', [
             'Salary',
             'Bonus',
